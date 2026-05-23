@@ -32,11 +32,16 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ first_name: '', last_name: '', plan: 'Mensuel' });
   const [submitting, setSubmitting] = useState(false);
-  const [flash, setFlash] = useState({ type: '', msg: '' });
 
-  // Confirmation inline pour suppression de visite
+  // Bannière d'erreur de connexion — persiste jusqu'à rechargement
+  const [connectionError, setConnectionError] = useState('');
+  // Flash success (disparaît) / erreurs actions (persistent jusqu'à dismiss)
+  const [flash, setFlash] = useState({ type: '', msg: '' });
+  // Erreur inline sous le formulaire d'ajout
+  const [formError, setFormError] = useState('');
+
+  // Confirmations inline
   const [confirmDeleteVisitId, setConfirmDeleteVisitId] = useState(null);
-  // Confirmation inline pour soft-delete de membre
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
 
   // Filtres onglet Historique
@@ -49,49 +54,75 @@ export default function AdminPage() {
     fetchAll();
   }, []);
 
-  function showFlash(type, msg) {
-    setFlash({ type, msg });
-    setTimeout(() => setFlash({ type: '', msg: '' }), 3000);
+  function showSuccess(msg) {
+    setFlash({ type: 'success', msg });
+    setTimeout(() => setFlash({ type: '', msg: '' }), 4000);
+  }
+
+  function showError(msg) {
+    // Les erreurs restent affichées jusqu'à fermeture manuelle
+    setFlash({ type: 'error', msg });
   }
 
   async function fetchAll() {
     setLoading(true);
-    const [
-      { data: partnersData },
-      { data: membersData },
-      { data: visitsData },
-    ] = await Promise.all([
-      supabase.from('partners').select('*').order('id'),
-      // Exclure les membres soft-deleted de la liste
-      supabase.from('members').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-      // Inclure deleted_at du membre pour le badge "Supprimé" dans l'historique
-      supabase
-        .from('visits')
-        .select('*, members(first_name, last_name, plan, deleted_at), partners(name)')
-        .order('visited_at', { ascending: false })
-        .limit(500),
-    ]);
-    setPartners(partnersData || []);
-    setMembers(membersData || []);
-    setVisits(visitsData || []);
-    setLoading(false);
+    setConnectionError('');
+    try {
+      const [
+        { data: partnersData, error: ePartners },
+        { data: membersData, error: eMembers },
+        { data: visitsData, error: eVisits },
+      ] = await Promise.all([
+        supabase.from('partners').select('*').order('id'),
+        supabase.from('members').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase
+          .from('visits')
+          .select('*, members(first_name, last_name, plan, deleted_at), partners(name)')
+          .order('visited_at', { ascending: false })
+          .limit(500),
+      ]);
+
+      // Détection d'erreur de connexion/autorisation sur n'importe quelle requête
+      const firstError = ePartners || eMembers || eVisits;
+      if (firstError) {
+        console.error('[Supabase fetchAll]', firstError);
+        setConnectionError(firstError.message);
+      }
+
+      setPartners(partnersData || []);
+      setMembers(membersData || []);
+      setVisits(visitsData || []);
+    } catch (err) {
+      console.error('[Supabase fetchAll exception]', err);
+      setConnectionError(err.message || 'Erreur de connexion inconnue');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function addMember(e) {
     e.preventDefault();
     if (!form.first_name.trim() || !form.last_name.trim()) return;
     setSubmitting(true);
-    const { error } = await supabase.from('members').insert({
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      plan: form.plan,
-      active: true,
-    });
+    setFormError('');
+
+    const { data, error } = await supabase
+      .from('members')
+      .insert({
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        plan: form.plan,
+        active: true,
+      })
+      .select();
+
     if (error) {
-      showFlash('error', 'Erreur : ' + error.message);
+      console.error('[Supabase addMember]', error);
+      setFormError(error.message);
     } else {
-      showFlash('success', 'Membre ajouté avec succès');
       setForm({ first_name: '', last_name: '', plan: 'Mensuel' });
+      setFormError('');
+      showSuccess('Membre ajouté avec succès');
       fetchAll();
     }
     setSubmitting(false);
@@ -102,7 +133,10 @@ export default function AdminPage() {
       .from('members')
       .update({ active: !member.active })
       .eq('id', member.id);
-    if (!error) {
+    if (error) {
+      console.error('[Supabase toggleMember]', error);
+      showError('Erreur : ' + error.message);
+    } else {
       setMembers((prev) =>
         prev.map((m) => (m.id === member.id ? { ...m, active: !m.active } : m))
       );
@@ -114,12 +148,12 @@ export default function AdminPage() {
       .from('members')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', memberId);
-    if (!error) {
-      // Retire de la liste immédiatement
-      setMembers((prev) => prev.filter((m) => m.id !== memberId));
-      showFlash('success', 'Membre supprimé');
+    if (error) {
+      console.error('[Supabase softDeleteMember]', error);
+      showError('Erreur : ' + error.message);
     } else {
-      showFlash('error', 'Erreur : ' + error.message);
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      showSuccess('Membre supprimé');
     }
     setConfirmDeleteMemberId(null);
   }
@@ -132,14 +166,17 @@ export default function AdminPage() {
       link.href = dataUrl;
       link.download = `qr-${member.first_name}-${member.last_name}.png`;
       link.click();
-    } catch {
-      showFlash('error', 'Erreur lors de la génération du QR code');
+    } catch (err) {
+      showError('Erreur QR code : ' + err.message);
     }
   }
 
   async function deleteVisit(visitId) {
     const { error } = await supabase.from('visits').delete().eq('id', visitId);
-    if (!error) {
+    if (error) {
+      console.error('[Supabase deleteVisit]', error);
+      showError('Erreur : ' + error.message);
+    } else {
       setVisits((prev) => prev.filter((v) => v.id !== visitId));
     }
     setConfirmDeleteVisitId(null);
@@ -217,16 +254,42 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Flash */}
+      {/* Bannière erreur de connexion Supabase — persistante */}
+      {connectionError && (
+        <div className="bg-red-600 text-white px-4 py-3 text-sm">
+          <div className="max-w-5xl mx-auto flex items-start gap-3">
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <p className="font-semibold">Impossible de se connecter à Supabase</p>
+              <p className="opacity-90 mt-0.5">{connectionError}</p>
+              <p className="opacity-75 mt-1 text-xs">
+                Si vous voyez "Host not in allowlist" : allez dans Supabase → Settings → API →
+                ajoutez votre domaine à la clé publishable, ou remplacez-la par la clé <strong>anon</strong> (JWT).
+              </p>
+            </div>
+            <button onClick={() => setConnectionError('')} className="ml-auto flex-shrink-0 opacity-75 hover:opacity-100">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Flash success / erreur action */}
       {flash.msg && (
         <div
-          className={`max-w-5xl mx-auto mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
+          className={`max-w-5xl mx-auto mt-4 px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-between gap-3 ${
             flash.type === 'success'
               ? 'bg-green-100 text-green-800 border border-green-200'
               : 'bg-red-100 text-red-800 border border-red-200'
           }`}
         >
-          {flash.msg}
+          <span>{flash.msg}</span>
+          <button
+            onClick={() => setFlash({ type: '', msg: '' })}
+            className="flex-shrink-0 opacity-60 hover:opacity-100 font-bold"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -328,6 +391,15 @@ export default function AdminPage() {
                       {submitting ? 'Ajout…' : 'Ajouter'}
                     </button>
                   </form>
+                  {formError && (
+                    <div className="mt-3 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
+                      <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="flex-1">{formError}</span>
+                      <button onClick={() => setFormError('')} className="flex-shrink-0 opacity-60 hover:opacity-100 font-bold">✕</button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Liste membres */}
