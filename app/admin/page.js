@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import QRCode from 'qrcode';
+import * as XLSX from 'xlsx';
 
 const TABS = [
   { id: 'partenaires', label: 'Partenaires' },
@@ -15,6 +16,14 @@ const PLAN_COLORS = {
   Annuel: 'bg-purple-100 text-purple-800',
 };
 
+function TrashIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('partenaires');
   const [partners, setPartners] = useState([]);
@@ -24,6 +33,14 @@ export default function AdminPage() {
   const [form, setForm] = useState({ first_name: '', last_name: '', plan: 'Mensuel' });
   const [submitting, setSubmitting] = useState(false);
   const [flash, setFlash] = useState({ type: '', msg: '' });
+
+  // Filters for Historique tab
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterPartner, setFilterPartner] = useState('');
+  const [filterPlan, setFilterPlan] = useState('');
+
+  // Confirmation state for delete (visitId being confirmed)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     fetchAll();
@@ -45,9 +62,9 @@ export default function AdminPage() {
       supabase.from('members').select('*').order('created_at', { ascending: false }),
       supabase
         .from('visits')
-        .select('*, members(first_name, last_name), partners(name)')
+        .select('*, members(first_name, last_name, plan), partners(name)')
         .order('visited_at', { ascending: false })
-        .limit(200),
+        .limit(500),
     ]);
     setPartners(partnersData || []);
     setMembers(membersData || []);
@@ -100,6 +117,14 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteVisit(visitId) {
+    const { error } = await supabase.from('visits').delete().eq('id', visitId);
+    if (!error) {
+      setVisits((prev) => prev.filter((v) => v.id !== visitId));
+    }
+    setConfirmDeleteId(null);
+  }
+
   function formatDate(iso) {
     return new Date(iso).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -108,6 +133,50 @@ export default function AdminPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  function formatMonthLabel(yyyymm) {
+    const [y, m] = yyyymm.split('-');
+    return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('fr-FR', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  // Derived: unique months present in visits data
+  const monthOptions = useMemo(() => {
+    const set = new Set(visits.map((v) => v.visited_at.slice(0, 7)));
+    return [...set].sort().reverse();
+  }, [visits]);
+
+  // Derived: filtered visits
+  const filteredVisits = useMemo(() => {
+    return visits.filter((v) => {
+      if (filterMonth && !v.visited_at.startsWith(filterMonth)) return false;
+      if (filterPartner && v.partner_id !== parseInt(filterPartner)) return false;
+      if (filterPlan && v.members?.plan !== filterPlan) return false;
+      return true;
+    });
+  }, [visits, filterMonth, filterPartner, filterPlan]);
+
+  const hasFilters = filterMonth || filterPartner || filterPlan;
+
+  function exportExcel() {
+    const rows = filteredVisits.map((v) => ({
+      Membre: v.members
+        ? `${v.members.first_name} ${v.members.last_name}`
+        : String(v.member_id),
+      Plan: v.members?.plan || '',
+      Partenaire: v.partners?.name || String(v.partner_id),
+      'Date/heure': formatDate(v.visited_at),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Auto column widths
+    ws['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 18 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Visites');
+    const filename = `visites-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
   }
 
   return (
@@ -188,7 +257,6 @@ export default function AdminPage() {
             {/* ── MEMBRES ── */}
             {activeTab === 'membres' && (
               <div>
-                {/* Add member form */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Ajouter un membre</h2>
                   <form onSubmit={addMember} className="flex flex-wrap gap-3 items-end">
@@ -235,7 +303,6 @@ export default function AdminPage() {
                   </form>
                 </div>
 
-                {/* Members list */}
                 <h2 className="text-lg font-semibold text-gray-800 mb-3">
                   Membres ({members.length})
                 </h2>
@@ -311,23 +378,117 @@ export default function AdminPage() {
             {/* ── HISTORIQUE ── */}
             {activeTab === 'historique' && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                  Historique des visites ({visits.length})
-                </h2>
+                {/* Toolbar: filters + export */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+                  <div className="flex flex-wrap gap-3 items-end">
+                    {/* Month filter */}
+                    <div className="min-w-[160px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mois</label>
+                      <select
+                        value={filterMonth}
+                        onChange={(e) => setFilterMonth(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                      >
+                        <option value="">Tous les mois</option>
+                        {monthOptions.map((m) => (
+                          <option key={m} value={m}>
+                            {formatMonthLabel(m)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Partner filter */}
+                    <div className="min-w-[160px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Partenaire</label>
+                      <select
+                        value={filterPartner}
+                        onChange={(e) => setFilterPartner(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                      >
+                        <option value="">Tous les partenaires</option>
+                        {partners.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Plan filter */}
+                    <div className="min-w-[140px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Plan</label>
+                      <select
+                        value={filterPlan}
+                        onChange={(e) => setFilterPlan(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                      >
+                        <option value="">Tous les plans</option>
+                        <option value="Mensuel">Mensuel</option>
+                        <option value="Annuel">Annuel</option>
+                      </select>
+                    </div>
+
+                    {/* Reset filters */}
+                    {hasFilters && (
+                      <button
+                        onClick={() => { setFilterMonth(''); setFilterPartner(''); setFilterPlan(''); }}
+                        className="text-sm text-gray-500 hover:text-gray-700 underline py-2 self-end"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Export Excel */}
+                    <button
+                      onClick={exportExcel}
+                      disabled={filteredVisits.length === 0}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors self-end"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Exporter Excel
+                      {hasFilters && filteredVisits.length !== visits.length && (
+                        <span className="bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                          {filteredVisits.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Visits table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  {visits.length === 0 ? (
-                    <p className="text-gray-400 text-center py-8">Aucune visite enregistrée</p>
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-gray-700">
+                      {filteredVisits.length} visite{filteredVisits.length !== 1 ? 's' : ''}
+                      {hasFilters && visits.length !== filteredVisits.length && (
+                        <span className="text-gray-400 font-normal"> (sur {visits.length} au total)</span>
+                      )}
+                    </h2>
+                  </div>
+
+                  {filteredVisits.length === 0 ? (
+                    <p className="text-gray-400 text-center py-8">
+                      {hasFilters ? 'Aucune visite pour ces filtres' : 'Aucune visite enregistrée'}
+                    </p>
                   ) : (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50">
                           <th className="text-left px-4 py-3 text-gray-600 font-medium">Membre</th>
+                          <th className="text-left px-4 py-3 text-gray-600 font-medium">Plan</th>
                           <th className="text-left px-4 py-3 text-gray-600 font-medium">Partenaire</th>
                           <th className="text-left px-4 py-3 text-gray-600 font-medium">Date</th>
+                          <th className="px-4 py-3" />
                         </tr>
                       </thead>
                       <tbody>
-                        {visits.map((v, i) => (
+                        {filteredVisits.map((v, i) => (
                           <tr
                             key={v.id}
                             className={`border-b border-gray-50 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}
@@ -337,10 +498,46 @@ export default function AdminPage() {
                                 ? `${v.members.first_name} ${v.members.last_name}`
                                 : v.member_id}
                             </td>
+                            <td className="px-4 py-3">
+                              {v.members?.plan && (
+                                <span
+                                  className={`text-xs font-medium px-2 py-1 rounded-full ${PLAN_COLORS[v.members.plan] || 'bg-gray-100 text-gray-700'}`}
+                                >
+                                  {v.members.plan}
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-gray-700">
                               {v.partners ? v.partners.name : v.partner_id}
                             </td>
                             <td className="px-4 py-3 text-gray-500">{formatDate(v.visited_at)}</td>
+                            <td className="px-4 py-3 text-right">
+                              {confirmDeleteId === v.id ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="text-xs text-gray-600">Supprimer ?</span>
+                                  <button
+                                    onClick={() => deleteVisit(v.id)}
+                                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors"
+                                  >
+                                    Oui
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors"
+                                  >
+                                    Non
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteId(v.id)}
+                                  className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                                  title="Supprimer cette visite"
+                                >
+                                  <TrashIcon />
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
