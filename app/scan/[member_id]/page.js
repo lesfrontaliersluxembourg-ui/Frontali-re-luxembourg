@@ -75,6 +75,23 @@ export default function ScanPage({ params }) {
     );
   }
 
+  // ── Membre supprimé (soft delete) ──
+  if (member.deleted_at) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <p className="text-gray-700 font-semibold text-lg">Ce compte n'existe plus</p>
+          <p className="text-gray-400 text-sm mt-2">Ce QR code n'est plus valide.</p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Success confirmation ──
   if (success) {
     return (
@@ -107,7 +124,7 @@ export default function ScanPage({ params }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-8">
       <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-sm">
-        {/* Club logo / title */}
+        {/* Titre */}
         <div className="text-center mb-6">
           <p className="text-xs uppercase tracking-widest text-gray-400 font-medium mb-1">
             La Frontalière Club
@@ -126,7 +143,7 @@ export default function ScanPage({ params }) {
           </span>
         </div>
 
-        {/* Inactive member block */}
+        {/* Membre inactif */}
         {!member.active && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
             <p className="text-red-700 font-semibold">Ce membre n'est plus actif</p>
@@ -134,7 +151,7 @@ export default function ScanPage({ params }) {
           </div>
         )}
 
-        {/* Active member flow */}
+        {/* Membre actif */}
         {member.active && (
           <>
             <div className="mb-4">
@@ -155,7 +172,6 @@ export default function ScanPage({ params }) {
               </select>
             </div>
 
-            {/* Partner selected: restriction check */}
             {selectedPartner && (
               <>
                 {isRestricted ? (

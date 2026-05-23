@@ -34,13 +34,16 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [flash, setFlash] = useState({ type: '', msg: '' });
 
-  // Filters for Historique tab
+  // Confirmation inline pour suppression de visite
+  const [confirmDeleteVisitId, setConfirmDeleteVisitId] = useState(null);
+  // Confirmation inline pour soft-delete de membre
+  const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
+
+  // Filtres onglet Historique
   const [filterMonth, setFilterMonth] = useState('');
   const [filterPartner, setFilterPartner] = useState('');
   const [filterPlan, setFilterPlan] = useState('');
-
-  // Confirmation state for delete (visitId being confirmed)
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [filterDeletedOnly, setFilterDeletedOnly] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -59,10 +62,12 @@ export default function AdminPage() {
       { data: visitsData },
     ] = await Promise.all([
       supabase.from('partners').select('*').order('id'),
-      supabase.from('members').select('*').order('created_at', { ascending: false }),
+      // Exclure les membres soft-deleted de la liste
+      supabase.from('members').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+      // Inclure deleted_at du membre pour le badge "Supprimé" dans l'historique
       supabase
         .from('visits')
-        .select('*, members(first_name, last_name, plan), partners(name)')
+        .select('*, members(first_name, last_name, plan, deleted_at), partners(name)')
         .order('visited_at', { ascending: false })
         .limit(500),
     ]);
@@ -104,6 +109,21 @@ export default function AdminPage() {
     }
   }
 
+  async function softDeleteMember(memberId) {
+    const { error } = await supabase
+      .from('members')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', memberId);
+    if (!error) {
+      // Retire de la liste immédiatement
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      showFlash('success', 'Membre supprimé');
+    } else {
+      showFlash('error', 'Erreur : ' + error.message);
+    }
+    setConfirmDeleteMemberId(null);
+  }
+
   async function generateQR(member) {
     const url = `${window.location.origin}/scan/${member.id}`;
     try {
@@ -122,7 +142,7 @@ export default function AdminPage() {
     if (!error) {
       setVisits((prev) => prev.filter((v) => v.id !== visitId));
     }
-    setConfirmDeleteId(null);
+    setConfirmDeleteVisitId(null);
   }
 
   function formatDate(iso) {
@@ -143,23 +163,31 @@ export default function AdminPage() {
     });
   }
 
-  // Derived: unique months present in visits data
+  function resetFilters() {
+    setFilterMonth('');
+    setFilterPartner('');
+    setFilterPlan('');
+    setFilterDeletedOnly(false);
+  }
+
+  // Mois présents dans les visites
   const monthOptions = useMemo(() => {
     const set = new Set(visits.map((v) => v.visited_at.slice(0, 7)));
     return [...set].sort().reverse();
   }, [visits]);
 
-  // Derived: filtered visits
+  // Visites filtrées
   const filteredVisits = useMemo(() => {
     return visits.filter((v) => {
       if (filterMonth && !v.visited_at.startsWith(filterMonth)) return false;
       if (filterPartner && v.partner_id !== parseInt(filterPartner)) return false;
       if (filterPlan && v.members?.plan !== filterPlan) return false;
+      if (filterDeletedOnly && !v.members?.deleted_at) return false;
       return true;
     });
-  }, [visits, filterMonth, filterPartner, filterPlan]);
+  }, [visits, filterMonth, filterPartner, filterPlan, filterDeletedOnly]);
 
-  const hasFilters = filterMonth || filterPartner || filterPlan;
+  const hasFilters = filterMonth || filterPartner || filterPlan || filterDeletedOnly;
 
   function exportExcel() {
     const rows = filteredVisits.map((v) => ({
@@ -171,12 +199,10 @@ export default function AdminPage() {
       'Date/heure': formatDate(v.visited_at),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    // Auto column widths
     ws['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 18 }, { wch: 20 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Visites');
-    const filename = `visites-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    XLSX.writeFile(wb, `visites-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   return (
@@ -191,7 +217,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Flash message */}
+      {/* Flash */}
       {flash.msg && (
         <div
           className={`max-w-5xl mx-auto mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
@@ -257,6 +283,7 @@ export default function AdminPage() {
             {/* ── MEMBRES ── */}
             {activeTab === 'membres' && (
               <div>
+                {/* Formulaire ajout */}
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Ajouter un membre</h2>
                   <form onSubmit={addMember} className="flex flex-wrap gap-3 items-end">
@@ -303,6 +330,7 @@ export default function AdminPage() {
                   </form>
                 </div>
 
+                {/* Liste membres */}
                 <h2 className="text-lg font-semibold text-gray-800 mb-3">
                   Membres ({members.length})
                 </h2>
@@ -347,24 +375,49 @@ export default function AdminPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  onClick={() => generateQR(m)}
-                                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
-                                >
-                                  QR Code
-                                </button>
-                                <button
-                                  onClick={() => toggleMember(m)}
-                                  className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                                    m.active
-                                      ? 'bg-red-100 hover:bg-red-200 text-red-700'
-                                      : 'bg-green-100 hover:bg-green-200 text-green-700'
-                                  }`}
-                                >
-                                  {m.active ? 'Désactiver' : 'Réactiver'}
-                                </button>
-                              </div>
+                              {confirmDeleteMemberId === m.id ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="text-xs text-gray-600">Supprimer définitivement ?</span>
+                                  <button
+                                    onClick={() => softDeleteMember(m.id)}
+                                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors"
+                                  >
+                                    Oui
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteMemberId(null)}
+                                    className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors"
+                                  >
+                                    Non
+                                  </button>
+                                </span>
+                              ) : (
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => generateQR(m)}
+                                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    QR Code
+                                  </button>
+                                  <button
+                                    onClick={() => toggleMember(m)}
+                                    className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                                      m.active
+                                        ? 'bg-orange-100 hover:bg-orange-200 text-orange-700'
+                                        : 'bg-green-100 hover:bg-green-200 text-green-700'
+                                    }`}
+                                  >
+                                    {m.active ? 'Désactiver' : 'Réactiver'}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteMemberId(m.id)}
+                                    className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-red-50"
+                                    title="Supprimer ce membre"
+                                  >
+                                    <TrashIcon />
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -378,10 +431,10 @@ export default function AdminPage() {
             {/* ── HISTORIQUE ── */}
             {activeTab === 'historique' && (
               <div>
-                {/* Toolbar: filters + export */}
+                {/* Barre filtres + export */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
                   <div className="flex flex-wrap gap-3 items-end">
-                    {/* Month filter */}
+                    {/* Filtre mois */}
                     <div className="min-w-[160px]">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Mois</label>
                       <select
@@ -398,7 +451,7 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* Partner filter */}
+                    {/* Filtre partenaire */}
                     <div className="min-w-[160px]">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Partenaire</label>
                       <select
@@ -415,7 +468,7 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* Plan filter */}
+                    {/* Filtre plan */}
                     <div className="min-w-[140px]">
                       <label className="block text-xs font-medium text-gray-600 mb-1">Plan</label>
                       <select
@@ -429,17 +482,33 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* Reset filters */}
+                    {/* Filtre membres supprimés */}
+                    <div className="flex items-center gap-2 self-end pb-2">
+                      <input
+                        type="checkbox"
+                        id="filterDeleted"
+                        checked={filterDeletedOnly}
+                        onChange={(e) => setFilterDeletedOnly(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-400 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="filterDeleted"
+                        className="text-sm text-gray-600 cursor-pointer select-none whitespace-nowrap"
+                      >
+                        Membres supprimés uniquement
+                      </label>
+                    </div>
+
+                    {/* Réinitialiser */}
                     {hasFilters && (
                       <button
-                        onClick={() => { setFilterMonth(''); setFilterPartner(''); setFilterPlan(''); }}
+                        onClick={resetFilters}
                         className="text-sm text-gray-500 hover:text-gray-700 underline py-2 self-end"
                       >
                         Réinitialiser
                       </button>
                     )}
 
-                    {/* Spacer */}
                     <div className="flex-1" />
 
                     {/* Export Excel */}
@@ -461,15 +530,15 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Visits table */}
+                {/* Tableau visites */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-gray-700">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <span className="text-sm font-semibold text-gray-700">
                       {filteredVisits.length} visite{filteredVisits.length !== 1 ? 's' : ''}
                       {hasFilters && visits.length !== filteredVisits.length && (
                         <span className="text-gray-400 font-normal"> (sur {visits.length} au total)</span>
                       )}
-                    </h2>
+                    </span>
                   </div>
 
                   {filteredVisits.length === 0 ? (
@@ -488,58 +557,69 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredVisits.map((v, i) => (
-                          <tr
-                            key={v.id}
-                            className={`border-b border-gray-50 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}
-                          >
-                            <td className="px-4 py-3 text-gray-900">
-                              {v.members
-                                ? `${v.members.first_name} ${v.members.last_name}`
-                                : v.member_id}
-                            </td>
-                            <td className="px-4 py-3">
-                              {v.members?.plan && (
-                                <span
-                                  className={`text-xs font-medium px-2 py-1 rounded-full ${PLAN_COLORS[v.members.plan] || 'bg-gray-100 text-gray-700'}`}
-                                >
-                                  {v.members.plan}
+                        {filteredVisits.map((v, i) => {
+                          const isDeleted = Boolean(v.members?.deleted_at);
+                          return (
+                            <tr
+                              key={v.id}
+                              className={`border-b border-gray-50 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}
+                            >
+                              {/* Nom + badge Supprimé */}
+                              <td className="px-4 py-3">
+                                <span className={isDeleted ? 'text-gray-400' : 'text-gray-900'}>
+                                  {v.members
+                                    ? `${v.members.first_name} ${v.members.last_name}`
+                                    : v.member_id}
                                 </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-gray-700">
-                              {v.partners ? v.partners.name : v.partner_id}
-                            </td>
-                            <td className="px-4 py-3 text-gray-500">{formatDate(v.visited_at)}</td>
-                            <td className="px-4 py-3 text-right">
-                              {confirmDeleteId === v.id ? (
-                                <span className="inline-flex items-center gap-2">
-                                  <span className="text-xs text-gray-600">Supprimer ?</span>
-                                  <button
-                                    onClick={() => deleteVisit(v.id)}
-                                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors"
+                                {isDeleted && (
+                                  <span className="ml-2 text-xs font-medium bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                                    Supprimé
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                {v.members?.plan && (
+                                  <span
+                                    className={`text-xs font-medium px-2 py-1 rounded-full ${isDeleted ? 'bg-gray-100 text-gray-400' : PLAN_COLORS[v.members.plan] || 'bg-gray-100 text-gray-700'}`}
                                   >
-                                    Oui
-                                  </button>
+                                    {v.members.plan}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">
+                                {v.partners ? v.partners.name : v.partner_id}
+                              </td>
+                              <td className="px-4 py-3 text-gray-500">{formatDate(v.visited_at)}</td>
+                              <td className="px-4 py-3 text-right">
+                                {confirmDeleteVisitId === v.id ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="text-xs text-gray-600">Supprimer ?</span>
+                                    <button
+                                      onClick={() => deleteVisit(v.id)}
+                                      className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors"
+                                    >
+                                      Oui
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteVisitId(null)}
+                                      className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors"
+                                    >
+                                      Non
+                                    </button>
+                                  </span>
+                                ) : (
                                   <button
-                                    onClick={() => setConfirmDeleteId(null)}
-                                    className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors"
+                                    onClick={() => setConfirmDeleteVisitId(v.id)}
+                                    className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                                    title="Supprimer cette visite"
                                   >
-                                    Non
+                                    <TrashIcon />
                                   </button>
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => setConfirmDeleteId(v.id)}
-                                  className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
-                                  title="Supprimer cette visite"
-                                >
-                                  <TrashIcon />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
