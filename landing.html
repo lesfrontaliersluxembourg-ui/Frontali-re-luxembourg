@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club des +10 Luxembourg</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #EF3340;
+    --blue: #003399;
+    --gold: #F5C842;
+    --white: #FAFAFA;
+    --dark: #0A0A0A;
+    --grey: #F0F0F0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--white); color: var(--dark); overflow-x: hidden; }
+
+  .hero {
+    min-height: 100vh;
+    background: var(--dark);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 60px 24px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(239,51,64,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(0,51,153,0.15) 0%, transparent 60%);
+  }
+  .flag-stripe {
+    position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: linear-gradient(90deg, var(--red) 33.3%, var(--white) 33.3% 66.6%, var(--blue) 66.6%);
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.4);
+    color: var(--gold); font-size: 12px; font-weight: 500; letter-spacing: 2px;
+    text-transform: uppercase; padding: 8px 20px; border-radius: 100px;
+    margin-bottom: 32px; position: relative;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif; font-size: clamp(42px, 8vw, 96px);
+    font-weight: 900; color: var(--white); line-height: 1; margin-bottom: 8px; position: relative;
+  }
+  .hero h1 span { color: var(--red); }
+  .hero h2 {
+    font-family: 'Playfair Display', serif; font-size: clamp(18px, 3vw, 32px);
+    font-weight: 700; color: var(--gold); margin-bottom: 24px; position: relative;
+  }
+  .hero p {
+    font-size: clamp(15px, 2vw, 18px); color: rgba(255,255,255,0.65);
+    max-width: 580px; line-height: 1.7; margin-bottom: 48px; position: relative;
+  }
+  .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; }
+  .btn-primary {
+    background: var(--red); color: white; padding: 16px 36px; border-radius: 4px;
+    font-size: 15px; font-weight: 500; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: #c8202e; transform: translateY(-2px); }
+  .btn-secondary {
+    background: transparent; color: white; padding: 16px 36px; border-radius: 4px;
+    font-size: 15px; font-weight: 500; text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: white; transform: translateY(-2px); }
+
+  .section { padding: 100px 24px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--red); margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif; font-size: clamp(32px, 5vw, 56px);
+    font-weight: 700; line-height: 1.1; margin-bottom: 64px; max-width: 600px;
+  }
+
+  /* ÉVÉNEMENTS */
+  .events-section { background: var(--dark); color: white; }
+  .events-section .section-title { color: white; }
+  .events-section .section-label { color: var(--gold); }
+  .events-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;
+    margin-bottom: 48px;
+  }
+  .event-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 32px 28px; border-radius: 4px; transition: background 0.2s;
+  }
+  .event-card:hover { background: rgba(255,255,255,0.08); }
+  .event-icon { font-size: 32px; margin-bottom: 16px; }
+  .event-card h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: white; margin-bottom: 10px; }
+  .event-card p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+  .event-perks {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+  }
+  .event-perk {
+    background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.2);
+    padding: 20px 24px; border-radius: 4px; display: flex; align-items: center; gap: 14px;
+  }
+  .event-perk span { font-size: 22px; }
+  .event-perk div { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+  .event-perk strong { display: block; color: var(--gold); font-size: 14px; margin-bottom: 2px; }
+
+  /* AVANTAGES */
+  .avantages-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2px; background: #e0e0e0; border: 2px solid #e0e0e0;
+  }
+  .avantage-card {
+    background: var(--white); padding: 40px 36px; transition: background 0.2s;
+  }
+  .avantage-card:hover { background: var(--grey); }
+  .avantage-icon {
+    width: 48px; height: 48px; background: var(--dark); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 24px;
+  }
+  .avantage-card h3 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .avantage-card .partner-type {
+    font-size: 12px; color: var(--red); font-weight: 500; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .avantage-card p { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 16px; }
+  .saving-badge {
+    display: inline-block; background: rgba(239,51,64,0.08); color: var(--red);
+    font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 2px;
+  }
+
+  /* RESTAURANTS */
+  .restaurants-section { background: #f5f5f5; }
+  .restaurant-card {
+    background: white; border: 1px solid #e0e0e0; padding: 28px 32px; border-radius: 4px;
+    margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap; transition: border-color 0.2s;
+  }
+  .restaurant-card:hover { border-color: var(--red); }
+  .restaurant-card h3 { font-family: 'Playfair Display', serif; font-size: 18px; }
+  .restaurant-card p { font-size: 13px; color: #888; margin-top: 4px; }
+  .discount-tag {
+    background: var(--red); color: white; font-size: 14px; font-weight: 500;
+    padding: 6px 16px; border-radius: 2px; white-space: nowrap;
+  }
+  .see-all { text-align: center; margin-top: 40px; }
+  .see-all a {
+    color: var(--red); font-size: 14px; text-decoration: none;
+    border-bottom: 1px solid rgba(239,51,64,0.4); padding-bottom: 2px; transition: border-color 0.2s;
+  }
+  .see-all a:hover { border-color: var(--red); }
+
+  /* PRICING */
+  .pricing-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px; max-width: 720px; margin: 0 auto;
+  }
+  .pricing-card {
+    border: 2px solid #e0e0e0; padding: 48px 40px; border-radius: 4px;
+    text-align: center; position: relative; transition: border-color 0.2s, transform 0.2s;
+  }
+  .pricing-card:hover { border-color: var(--red); transform: translateY(-4px); }
+  .pricing-card.featured { border-color: var(--red); background: var(--dark); color: white; }
+  .popular-tag {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: var(--red); color: white; font-size: 11px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase; padding: 5px 16px;
+    border-radius: 100px; white-space: nowrap;
+  }
+  .pricing-card h3 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 24px; }
+  .price { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+  .price sup { font-size: 24px; vertical-align: super; }
+  .price-period { font-size: 13px; color: #888; margin-bottom: 32px; }
+  .pricing-card.featured .price-period { color: rgba(255,255,255,0.5); }
+  .pricing-features { list-style: none; text-align: left; margin-bottom: 40px; }
+  .pricing-features li {
+    font-size: 14px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+    display: flex; align-items: flex-start; gap: 10px; color: #444; line-height: 1.4;
+  }
+  .pricing-card.featured .pricing-features li { color: rgba(255,255,255,0.7); border-bottom-color: rgba(255,255,255,0.1); }
+  .pricing-features li::before { content: '✓'; color: var(--red); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .btn-plan {
+    display: block; width: 100%; padding: 16px; border-radius: 4px;
+    font-size: 15px; font-weight: 500; text-decoration: none; text-align: center; transition: all 0.2s;
+  }
+  .btn-plan-dark { background: var(--dark); color: white; }
+  .btn-plan-dark:hover { background: #222; }
+  .btn-plan-red { background: var(--red); color: white; }
+  .btn-plan-red:hover { background: #c8202e; }
+  .economy-note { text-align: center; margin-top: 24px; font-size: 13px; color: #888; }
+  .economy-note strong { color: var(--red); }
+
+  footer {
+    background: var(--dark); color: rgba(255,255,255,0.4);
+    text-align: center; padding: 48px 24px; font-size: 13px;
+  }
+
+  @media (max-width: 600px) {
+    .hero-cta { flex-direction: column; align-items: center; }
+    .btn-primary, .btn-secondary { width: 100%; text-align: center; }
+    .restaurant-card { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="flag-stripe"></div>
+  <div class="badge">🇱🇺 Club Exclusif au Luxembourg</div>
+  <h1>Club des <span>+10</span></h1>
+  <h2>Luxembourg</h2>
+  <p>Événements exclusifs, réductions partenaires, restaurants à prix réduit. Un seul abonnement pour tout ce qui compte au Luxembourg.</p>
+  <div class="hero-cta">
+    <a href="https://buy.stripe.com/cNiaEW0u1eNqe25e7XdUY0i" class="btn-primary">Rejoindre — 19,99€/mois</a>
+    <a href="#evenements" class="btn-secondary">Découvrir les avantages</a>
+  </div>
+</section>
+
+<!-- ÉVÉNEMENTS -->
+<section class="section events-section" id="evenements">
+  <div class="container">
+    <div class="section-label">Événements & Réseau</div>
+    <h2 class="section-title">Des événements qui font avancer</h2>
+    <div class="events-grid">
+      <div class="event-card">
+        <div class="event-icon">💰</div>
+        <h3>Négocier son salaire</h3>
+        <p>Apprenez les techniques des experts pour maximiser votre rémunération au Luxembourg.</p>
+      </div>
+      <div class="event-card">
+        <div class="event-icon">📈</div>
+        <h3>Investissement</h3>
+        <p>Comprendre comment faire fructifier votre argent avec des experts financiers locaux.</p>
+      </div>
+      <div class="event-card">
+        <div class="event-icon">🤝</div>
+        <h3>Réseautage</h3>
+        <p>Rencontrez des profils ambitieux comme vous et développez votre réseau au Luxembourg.</p>
+      </div>
+      <div class="event-card">
+        <div class="event-icon">🎯</div>
+        <h3>Et bien plus encore</h3>
+        <p>Fiscalité, entrepreneuriat, immobilier, bien-être… Des thématiques variées tout au long de l'année.</p>
+      </div>
+    </div>
+    <div class="event-perks">
+      <div class="event-perk">
+        <span>🎟️</span>
+        <div><strong>Accès prioritaire</strong>Les membres sont les premiers à réserver leurs places aux événements.</div>
+      </div>
+      <div class="event-perk">
+        <span>💸</span>
+        <div><strong>Prix membres réduits</strong>Les événements sont payants mais à tarif préférentiel exclusif membres.</div>
+      </div>
+      <div class="event-perk">
+        <span>▶️</span>
+        <div><strong>Replay des experts</strong>Impossible de venir ? Accédez au replay vidéo de chaque intervention d'expert.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AVANTAGES PARTENAIRES -->
+<section class="section" id="avantages">
+  <div class="container">
+    <div class="section-label">Partenaires exclusifs</div>
+    <h2 class="section-title">Des économies concrètes dès le premier mois</h2>
+    <div class="avantages-grid">
+      <div class="avantage-card">
+        <div class="avantage-icon">💼</div>
+        <h3>Fidolux</h3>
+        <div class="partner-type">Expert-comptable — Annuel uniquement</div>
+        <p>Tarifs préférentiels pour votre comptabilité et la création de votre entreprise au Luxembourg.</p>
+        <span class="saving-badge">250€ comptabilité · 1 500€ création entreprise</span>
+      </div>
+      <div class="avantage-card">
+        <div class="avantage-icon">💪</div>
+        <h3>New Life Fitness</h3>
+        <div class="partner-type">Salle de sport</div>
+        <p>Première séance offerte et réduction exclusive à l'inscription pour tous les membres.</p>
+        <span class="saving-badge">1ère séance gratuite + 50% à l'inscription</span>
+      </div>
+      <div class="avantage-card">
+        <div class="avantage-icon">🏋️</div>
+        <h3>Iron Body Luxembourg</h3>
+        <div class="partner-type">Salle de sport</div>
+        <p>Testez gratuitement avant de vous engager, réduction exclusive à l'inscription.</p>
+        <span class="saving-badge">1ère séance gratuite + 50% à l'inscription</span>
+      </div>
+      <div class="avantage-card">
+        <div class="avantage-icon">🏢</div>
+        <h3>Colors</h3>
+        <div class="partner-type">Domiciliation & Coworking — Annuel uniquement</div>
+        <p>Domiciliez votre entreprise ou travaillez dans un espace moderne au Luxembourg.</p>
+        <span class="saving-badge">1er mois offert — 199€ HT d'économie</span>
+      </div>
+      <div class="avantage-card">
+        <div class="avantage-icon">📊</div>
+        <h3>Pulse</h3>
+        <div class="partner-type">Déclaration fiscale</div>
+        <p>Simplifiez votre déclaration fiscale luxembourgeoise avec une réduction immédiate.</p>
+        <span class="saving-badge">25€ de réduction</span>
+      </div>
+      <div class="avantage-card">
+        <div class="avantage-icon">✨</div>
+        <h3>Samaramuse</h3>
+        <div class="partner-type">Centre esthétique</div>
+        <p>Prenez soin de vous avec un mois d'abonnement offert dans ce centre partenaire.</p>
+        <span class="saving-badge">1 mois d'abonnement offert</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESTAURANTS -->
+<section class="section restaurants-section" id="restaurants">
+  <div class="container">
+    <div class="section-label">Gastronomie</div>
+    <h2 class="section-title">Des réductions dans les meilleurs restaurants</h2>
+    <div class="restaurant-card">
+      <div>
+        <h3>Restaurants partenaires Yoodup</h3>
+        <p>Accès à tout le réseau de restaurants partenaires au Luxembourg</p>
+      </div>
+      <span class="discount-tag">-25% à -35% sur l'addition</span>
+    </div>
+    <div class="restaurant-card">
+      <div>
+        <h3>Offres 2-pour-1</h3>
+        <p>Sélection de restaurants avec offres duo exclusives membres</p>
+      </div>
+      <span class="discount-tag">2 pour 1</span>
+    </div>
+    <div class="restaurant-card">
+      <div>
+        <h3>Déjeuner, brunch & dîner</h3>
+        <p>Des offres valables sur tous les services de la journée, illimitées</p>
+      </div>
+      <span class="discount-tag">Illimité</span>
+    </div>
+    <div class="see-all">
+      <a href="https://www.yoodup.com/fr" target="_blank">Voir la liste complète des restaurants partenaires →</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" id="tarifs">
+  <div class="container" style="text-align:center">
+    <div class="section-label" style="text-align:center">Tarifs</div>
+    <h2 class="section-title" style="margin:0 auto 64px;text-align:center">Choisissez votre formule</h2>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Mensuel</h3>
+        <div class="price"><sup>€</sup>19<span style="font-size:32px">,99</span></div>
+        <div class="price-period">par mois · sans engagement</div>
+        <ul class="pricing-features">
+          <li>Accès prioritaire aux événements</li>
+          <li>Prix réduits membres aux événements</li>
+          <li>Replay vidéo des experts</li>
+          <li>Réductions restaurants Yoodup</li>
+          <li>New Life Fitness & Iron Body</li>
+          <li>Pulse — déclaration fiscale</li>
+          <li>Samaramuse — esthétique</li>
+          <li>QR code personnel</li>
+        </ul>
+        <a href="https://buy.stripe.com/cNiaEW0u1eNqe25e7XdUY0i" class="btn-plan btn-plan-dark">Commencer maintenant</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="popular-tag">⭐ Meilleure valeur</div>
+        <h3>Annuel</h3>
+        <div class="price"><sup>€</sup>200</div>
+        <div class="price-period">par an · soit 16,67€/mois</div>
+        <ul class="pricing-features">
+          <li>Tout du plan Mensuel</li>
+          <li>Fidolux — tarifs expert-comptable</li>
+          <li>Colors — 1er mois coworking offert (199€)</li>
+          <li>Économisez 39,88€ vs mensuel</li>
+          <li>Accès à tous les partenaires sans exception</li>
+        </ul>
+        <a href="https://buy.stripe.com/bJedR86Sp20E0bfgg5dUY0h" class="btn-plan btn-plan-red">Choisir l'annuel</a>
+      </div>
+    </div>
+    <p class="economy-note">Plan annuel : économisez <strong>39,88€</strong> par rapport au mensuel · Accès immédiat après paiement</p>
+  </div>
+</section>
+
+<footer>
+  <div style="margin-bottom:16px;font-family:'Playfair Display',serif;font-size:18px;color:rgba(255,255,255,0.7)">Club des +10 Luxembourg</div>
+  <p>© 2025 Club des +10 Luxembourg · Tous droits réservés</p>
+</footer>
+
+</body>
+</html>
