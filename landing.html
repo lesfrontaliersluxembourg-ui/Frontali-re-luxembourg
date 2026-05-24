@@ -309,46 +309,67 @@
 </section>
 
 <!-- ÉVÉNEMENTS -->
-<section class="section events-section" id="evenements">
+<section class="section events-section" id="evenements" style="background:#0A0A0A;color:white">
   <div class="container">
-    <div class="section-label">Événements & Réseau</div>
-    <h2 class="section-title">Des événements qui font avancer</h2>
-    <div class="events-grid">
-      <div class="event-card">
-        <div class="event-icon">💰</div>
-        <h3>Négocier son salaire</h3>
-        <p>Apprenez les techniques des experts pour maximiser votre rémunération au Luxembourg.</p>
+    <div class="section-label" style="color:#F5C842">Événements & Réseau</div>
+    <h2 class="section-title" style="color:white">Des événements qui font avancer</h2>
+
+    <!-- Layout principal : grand bloc gauche + 3 petits empilés à droite -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+      <!-- Grand bloc : Investissement -->
+      <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:2rem;display:flex;flex-direction:column;justify-content:flex-end;min-height:280px">
+        <div style="font-size:40px;margin-bottom:16px">📈</div>
+        <div style="font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:#F5C842;margin-bottom:8px">Événement phare</div>
+        <h3 style="font-size:22px;font-weight:700;color:white;margin-bottom:10px">Investissement</h3>
+        <p style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.65">Apprenez à faire fructifier votre argent avec les meilleurs experts financiers du Luxembourg. Immobilier, bourse, crypto, fiscalité — prenez les bonnes décisions pour votre patrimoine.</p>
       </div>
-      <div class="event-card">
-        <div class="event-icon">📈</div>
-        <h3>Investissement</h3>
-        <p>Comprendre comment faire fructifier votre argent avec des experts financiers locaux.</p>
-      </div>
-      <div class="event-card">
-        <div class="event-icon">🤝</div>
-        <h3>Réseautage</h3>
-        <p>Rencontrez des profils ambitieux comme vous et développez votre réseau au Luxembourg.</p>
-      </div>
-      <div class="event-card">
-        <div class="event-icon">🎯</div>
-        <h3>Et bien plus encore</h3>
-        <p>Fiscalité, entrepreneuriat, immobilier, bien-être… Des thématiques variées tout au long de l'année.</p>
+
+      <!-- 3 petits blocs empilés -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;flex:1">
+          <div style="font-size:26px;flex-shrink:0">💰</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Négocier son salaire</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5">Techniques concrètes pour maximiser votre rémunération au Luxembourg.</div>
+          </div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;flex:1">
+          <div style="font-size:26px;flex-shrink:0">🤝</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Réseautage</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5">Rencontrez des profils ambitieux et développez votre réseau.</div>
+          </div>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:14px;flex:1">
+          <div style="font-size:26px;flex-shrink:0">🎯</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:white;margin-bottom:3px">Et bien plus encore</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5">Fiscalité, entrepreneuriat, immobilier, bien-être… Des thématiques variées tout au long de l'année.</div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="event-perks">
-      <div class="event-perk">
-        <span>🎟️</span>
-        <div><strong>Accès prioritaire</strong>Les membres sont les premiers à réserver leurs places aux événements.</div>
+
+    <!-- 3 blocs dorés -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:1.25rem">
+        <div style="font-size:24px;margin-bottom:10px">🎟️</div>
+        <div style="font-size:14px;font-weight:600;color:white;margin-bottom:6px">Accès prioritaire</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.55">Les membres réservent en premier, avant tout le monde.</div>
       </div>
-      <div class="event-perk">
-        <span>💸</span>
-        <div><strong>Prix membres réduits</strong>Les événements sont payants mais à tarif préférentiel exclusif membres.</div>
+      <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:1.25rem">
+        <div style="font-size:24px;margin-bottom:10px">💸</div>
+        <div style="font-size:14px;font-weight:600;color:white;margin-bottom:6px">Prix membres réduits</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.55">Les événements sont payants mais à tarif préférentiel exclusif membres.</div>
       </div>
-      <div class="event-perk">
-        <span>▶️</span>
-        <div><strong>Replay des experts</strong>Impossible de venir ? Accédez au replay vidéo de chaque intervention d'expert.</div>
+      <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:1.25rem">
+        <div style="font-size:24px;margin-bottom:10px">▶️</div>
+        <div style="font-size:14px;font-weight:600;color:white;margin-bottom:6px">Replay des experts</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.55">Impossible de venir ? Accédez au replay vidéo de chaque intervention.</div>
       </div>
     </div>
+
   </div>
 </section>
 
