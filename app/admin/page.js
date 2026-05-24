@@ -25,6 +25,83 @@ function TrashIcon() {
 }
 
 export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  useEffect(() => {
+    setAuthed(localStorage.getItem('admin_auth_v1') === 'true');
+    setAuthChecked(true);
+  }, []);
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setAuthSubmitting(true);
+    setAuthError('');
+    try {
+      const res = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        localStorage.setItem('admin_auth_v1', 'true');
+        setAuthed(true);
+      } else {
+        setAuthError(data.error || 'Mot de passe incorrect');
+      }
+    } catch {
+      setAuthError('Erreur réseau, réessayez.');
+    }
+    setAuthSubmitting(false);
+  }
+
+  if (!authChecked) return null;
+
+  if (!authed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full max-w-sm">
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Administration</h1>
+          <p className="text-sm text-gray-500 mb-6">La Frontalière Club</p>
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mot de passe</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                autoFocus
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                placeholder="••••••••"
+              />
+            </div>
+            {authError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {authError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={authSubmitting}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+            >
+              {authSubmitting ? 'Vérification…' : 'Accéder'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return <AdminContent />;
+}
+
+function AdminContent() {
   const [activeTab, setActiveTab] = useState('partenaires');
   const [partners, setPartners] = useState([]);
   const [members, setMembers] = useState([]);
