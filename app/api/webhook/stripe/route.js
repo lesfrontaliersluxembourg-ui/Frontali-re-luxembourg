@@ -56,6 +56,8 @@ export async function POST(request) {
         const firstName = session.metadata?.first_name?.trim();
         const lastName = session.metadata?.last_name?.trim();
         const customerId = session.customer;
+        const email = session.customer_details?.email || session.customer_email || null;
+        const phone = session.customer_details?.phone || null;
 
         if (!firstName || !lastName) {
           console.error(
@@ -96,6 +98,8 @@ export async function POST(request) {
           plan,
           active: true,
           stripe_customer_id: customerId,
+          email,
+          phone,
         });
 
         if (insertError) {
