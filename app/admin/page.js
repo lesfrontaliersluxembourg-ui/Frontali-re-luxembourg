@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [members, setMembers] = useState([]);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ first_name: '', last_name: '', plan: 'Mensuel' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', plan: 'Mensuel', email: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
 
   // Bannière d'erreur de connexion — persiste jusqu'à rechargement
@@ -113,6 +113,8 @@ export default function AdminPage() {
         last_name: form.last_name.trim(),
         plan: form.plan,
         active: true,
+        ...(form.email.trim() && { email: form.email.trim() }),
+        ...(form.phone.trim() && { phone: form.phone.trim() }),
       })
       .select();
 
@@ -120,7 +122,7 @@ export default function AdminPage() {
       console.error('[Supabase addMember]', error);
       setFormError(error.message);
     } else {
-      setForm({ first_name: '', last_name: '', plan: 'Mensuel' });
+      setForm({ first_name: '', last_name: '', plan: 'Mensuel', email: '', phone: '' });
       setFormError('');
       showSuccess('Membre ajouté avec succès');
       fetchAll();
@@ -383,6 +385,30 @@ export default function AdminPage() {
                         <option value="Annuel">Annuel</option>
                       </select>
                     </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Email <span className="text-gray-400">(optionnel)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        placeholder="email@exemple.com"
+                      />
+                    </div>
+                    <div className="min-w-[160px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Téléphone <span className="text-gray-400">(optionnel)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        placeholder="+352 691 000 000"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={submitting}
@@ -425,8 +451,18 @@ export default function AdminPage() {
                             key={m.id}
                             className={`border-b border-gray-50 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}
                           >
-                            <td className="px-4 py-3 font-medium text-gray-900">
-                              {m.first_name} {m.last_name}
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-gray-900">{m.first_name} {m.last_name}</span>
+                              {(m.email || m.phone) && (
+                                <div className="flex flex-col mt-0.5 gap-0.5">
+                                  {m.email && (
+                                    <span className="text-xs text-gray-400">{m.email}</span>
+                                  )}
+                                  {m.phone && (
+                                    <span className="text-xs text-gray-400">{m.phone}</span>
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span
