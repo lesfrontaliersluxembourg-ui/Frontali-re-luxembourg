@@ -200,6 +200,37 @@
     .btn-primary, .btn-secondary { width: 100%; text-align: center; }
     .restaurant-card { flex-direction: column; align-items: flex-start; }
   }
+
+  /* RENTABILITÉ */
+  .roi-section { background: var(--red); }
+  .roi-section .section-label { color: rgba(255,255,255,0.65); }
+  .roi-section .section-title { color: white; }
+  .roi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.2);
+    margin-bottom: 56px;
+  }
+  .roi-card { background: rgba(0,0,0,0.14); padding: 48px 40px; }
+  .roi-number {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(64px, 9vw, 96px); font-weight: 900; line-height: 1;
+    color: white; margin-bottom: 14px; letter-spacing: -2px;
+  }
+  .roi-card-title { font-size: 15px; font-weight: 600; color: white; margin-bottom: 10px; }
+  .roi-card-text { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; }
+  .roi-payoff {
+    text-align: center; padding: 40px 24px;
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  }
+  .roi-payoff-text {
+    font-family: 'Playfair Display', serif; font-style: italic;
+    font-size: clamp(22px, 4vw, 42px); font-weight: 700; color: white;
+    margin-bottom: 12px;
+  }
+  .roi-payoff-sub { font-size: 14px; color: rgba(255,255,255,0.6); }
+  @media (max-width: 600px) {
+    .roi-card { padding: 36px 28px; }
+  }
 </style>
 </head>
 <body>
@@ -214,6 +245,39 @@
   <div class="hero-cta">
     <a href="https://buy.stripe.com/cNiaEW0u1eNqe25e7XdUY0i" class="btn-primary">Rejoindre — 19,99€/mois</a>
     <a href="#evenements" class="btn-secondary">Découvrir les avantages</a>
+  </div>
+</section>
+
+<!-- RENTABILITÉ -->
+<section class="section roi-section" id="rentabilite">
+  <div class="container">
+    <div class="section-label">Rentabilité</div>
+    <h2 class="section-title">Rentabilisé dès le premier mois</h2>
+    <div class="roi-grid">
+
+      <div class="roi-card">
+        <div class="roi-number">2</div>
+        <div class="roi-card-title">repas au restaurant par mois suffisent</div>
+        <p class="roi-card-text">Avec les réductions Yoodup (−25 % à −35 % sur l'addition), 2 repas économisent déjà <strong style="color:white">20€</strong> — soit plus que l'abonnement mensuel à 19,99€. L'abonnement est couvert.</p>
+      </div>
+
+      <div class="roi-card">
+        <div class="roi-number">&gt; 2</div>
+        <div class="roi-card-title">repas hors domicile par mois en réalité</div>
+        <p class="roi-card-text">Les frontaliers déjeunent régulièrement à l'extérieur au Luxembourg. La réalité dépasse largement les 2 repas — chaque sortie supplémentaire génère du <strong style="color:white">bénéfice net</strong>.</p>
+      </div>
+
+      <div class="roi-card">
+        <div class="roi-number">199€</div>
+        <div class="roi-card-title">offerts dès le 1er mois (plan Annuel)</div>
+        <p class="roi-card-text">Colors (coworking / domiciliation) ou Samaramuse remboursent à eux seuls <strong style="color:white">l'intégralité de votre abonnement annuel</strong> dès le premier avantage utilisé.</p>
+      </div>
+
+    </div>
+    <div class="roi-payoff">
+      <p class="roi-payoff-text">"Votre abonnement se paye tout seul"</p>
+      <p class="roi-payoff-sub">Calculez vous-même : 2 repas par mois couvrent déjà l'abonnement — tout le reste est du pur profit.</p>
+    </div>
   </div>
 </section>
 
